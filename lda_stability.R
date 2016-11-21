@@ -17,6 +17,7 @@ library(foreach)
 ## TODO: 
 ## - let user pass document, token, n column identifiers
 ## - helper functions shouldn't be exported
+## - set seed externally
 
 ## --------------------
 ## Helper functions to be used to calculate agreement scores
@@ -47,6 +48,7 @@ extract_rankset = function(tidy_lda, t) {
 ## --------------------
 ## Given two ranksets, calculate their agreement score
 agreement = function (s0_rankset, si_rankset) {
+	k = length(s0_rankset)
 	## Construct an edgelist from the two ranksets
 	aj_edgelist = expand.grid(s0_rankset, si_rankset) %>% 
 		## Calculate the average Jaccard similarity at each pair of lists from the two sets
@@ -76,53 +78,56 @@ lda_stability = function (token_counts,  ## token count df
 	## Number of documents
 	n = length(unique(token_counts$document))
 	
-	print('pre-dtm')
 	## Cast token_counts into a document-term matrix
 	projects_dtm = cast_dtm(token_counts, document, token, token_n)
 	
-	print('pre-samples')
 	## Draw sample corpora, and convert each to DTM
 	set.seed(54321)
-	print(beta * n)
 	samples = lapply(1:tau, function (x) sample(unique(token_counts$document), 
 												size = beta * n)) %>%
 		lapply(function (x) filter(token_counts, document %in% x)) %>%
 		lapply(function (x) cast_dtm(x, document, token, token_n))
 	
-	print('pre-agree_scores')
+	## Iterate over the values of k
 	agree_scores = foreach(k = k_range, 
 						   .combine = 'cbind', 
 						   .verbose = TRUE, 
-						   .packages = 'topicmodels') %do% 
-						   {
-						   	## 1. Apply the topic modeling algorithm to the complete data set of n documents
-						   	##    to generate k topics, and represent the output as the reference ranking set
-						   	##    S0.
-						   	s0 = LDA(projects_dtm, k = k, control = list(seed = 42)) %>%
-						   		tidy()
-						   	
-						   	## 2. For each sample Xi:
-						   	## (a) Apply the topic modeling algorithm to Xi to generate k topics, and
-						   	##     represent the output as the ranking set Si.
-						   	si = lapply(samples, function (x) {LDA(x, k = k) %>% tidy})
-						   	
-						   	## (b) Calculate the agreement score agree(S0, Si).
-						   	s0_rankset = extract_rankset(s0, t)
-						   	si_ranksets = lapply(si, function (x) extract_rankset(x, t))
-						   	
-						   	agree_scores = foreach(rankset = si_ranksets, 
-						   						   .combine = 'cbind', .verbose = TRUE, 
-						   						   .packages = c('tidytext', 'dplyr', 'igraph'), 
-						   						   .export = 'agreement') %dopar% 
-						   						   {agreement(s0_rankset, rankset)}
-						   	
-						   	agree_scores
-						   }						   			  	
-	print('agreement_scores')
+						   .packages = c('topicmodels', 'tidyr')
+	) %do% 
+	{
+		## 1. Apply the topic modeling algorithm to the complete data set of n documents
+		##    to generate k topics, and represent the output as the reference ranking set
+		##    S0.
+		s0 = LDA(projects_dtm, k = k, control = list(seed = 42)) %>%
+			tidy()
+		
+		## 2. For each sample Xi:
+		## (a) Apply the topic modeling algorithm to Xi to generate k topics, and
+		##     represent the output as the ranking set Si.
+		si = lapply(samples, function (x) {LDA(x, k = k) %>% tidy})
+		
+		## (b) Calculate the agreement score agree(S0, Si).
+		s0_rankset = extract_rankset(s0, t)
+		si_ranksets = lapply(si, function (x) extract_rankset(x, t))
+		
+		agree_scores = foreach(rankset = si_ranksets, 
+							   .combine = 'c', .verbose = TRUE, 
+							   .packages = c('tidytext', 'dplyr', 'igraph', 
+							   			  'stringr'), 
+							   .export = c('agreement', 
+							   			'extract_rankset', 
+							   			'avg_jaccard', 
+							   			'jaccard')
+		) %dopar% 
+		{agreement(s0_rankset, rankset)}
+		
+		agree_scores
+	}
+	## Return the results in a tidy dataframe
 	agreement_scores = agree_scores %>% 
 		as_tibble %>%
-		melt %>%
-		mutate(variable = {str_replace(variable, 'result.', '') %>%
+		gather(k, agreement, factor_key = FALSE) %>%
+		mutate(k = {str_replace(k, 'result.', '') %>%
 				as.numeric %>% k_range[.]})
 	return(agreement_scores)
 }

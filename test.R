@@ -1,11 +1,11 @@
-# source('lda_stability.R')
+## A simple test/vignette for `lda_stability`
 
 library(tidyverse)
 library(stringr)
 library(tidytext)
 library(janeaustenr)
 
-## Set up a test dataf, as in the `tidytext`` vignette
+## Set up a test dataf, as in the `tidytext` vignette
 dataf = austen_books() %>%
 	group_by(book) %>%
 	mutate(chapter = cumsum(str_detect(text, regex('^chapter [\\divxlc]', 
@@ -23,11 +23,23 @@ token_counts = dataf %>%
 	## Let's go ahead and remove stopwords
 	anti_join(stop_words, by = c('token' = 'word'))
 
-## Now's the time to set up parallel processing
+## Set up parallel processing
 library(doParallel)
 cl = makeCluster(4)
 registerDoParallel(cl)
 getDoParWorkers()
 
+## Generate the agreement scores
 source('lda_stability.R')
-agreement_scores = lda_stability(token_counts, tau = 3, k_range = 2:3, t = 5)
+agreement_scores = lda_stability(token_counts,   ## token count df
+								 beta = .80,     ## fraction of docs to include in each sample
+								 tau = 20,       ## num. samples
+								 k_range = 2:12, ## range of values of k to fit
+								 t = 20          ## max num. terms in each ranked list
+								 )
+
+## Plot the results
+ggplot(agreement_scores, aes(k, agreement)) + 
+	geom_point() + 
+	stat_summary(geom = 'line')
+
