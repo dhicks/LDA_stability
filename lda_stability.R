@@ -104,7 +104,11 @@ lda_stability = function (token_counts,  ## token count df
 		## 2. For each sample Xi:
 		## (a) Apply the topic modeling algorithm to Xi to generate k topics, and
 		##     represent the output as the ranking set Si.
-		si = lapply(samples, function (x) {LDA(x, k = k) %>% tidy})
+		# si = lapply(samples, function (x) {LDA(x, k = k) %>% tidy})
+		si = foreach(sample = samples, 
+					 .packages = c('topicmodels', 'tidytext', 'tidyr')
+		) %dopar% 
+		{LDA(sample, k = k) %>% tidy}
 		
 		## (b) Calculate the agreement score agree(S0, Si).
 		s0_rankset = extract_rankset(s0, t)
