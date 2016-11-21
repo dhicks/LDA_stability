@@ -1,0 +1,3 @@
+The code in this repository implements a method for assessing the stability of Latent Dirichlet Allocation [LDA, topic modeling].  See <https://arxiv.org/pdf/1404.4606v3.pdf>.  
+
+`test.R` includes a simple vignette/test case.  (Try `k_range = 2:3`, `tau = 2` for a relatively quick-running test.)  Note that currently the code assumes that `token_counts` has column names `document`, `token`, and `token_n`.  
