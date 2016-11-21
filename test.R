@@ -31,15 +31,21 @@ getDoParWorkers()
 
 ## Generate the agreement scores
 source('lda_stability.R')
+k_range = 2:12
+start.time = proc.time()
 agreement_scores = lda_stability(token_counts,   ## token count df
 								 beta = .80,     ## fraction of docs to include in each sample
 								 tau = 20,       ## num. samples
-								 k_range = 2:12, ## range of values of k to fit
-								 t = 20          ## max num. terms in each ranked list
+								 k_range = k_range, ## range of values of k to fit
+								 t = 15          ## max num. terms in each ranked list
 								 )
+end.time = proc.time()
+
+end.time - start.time
 
 ## Plot the results
 ggplot(agreement_scores, aes(k, agreement)) + 
 	geom_point() + 
-	stat_summary(geom = 'line')
+	stat_summary(geom = 'line') +
+	scale_x_continuous(breaks = k_range)
 
