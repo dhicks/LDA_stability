@@ -20,6 +20,7 @@ token_counts = dataf %>%
 	unnest_tokens(token, text) %>%
 	group_by(document, token) %>%
 	summarize(token_n = n()) %>%
+    ungroup() %>%
 	## Let's go ahead and remove stopwords
 	anti_join(stop_words, by = c('token' = 'word'))
 
