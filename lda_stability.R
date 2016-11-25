@@ -1,17 +1,6 @@
 ## This file defines a function LDA_stability to implement 
 ## the algorithm described in https://arxiv.org/pdf/1404.4606v3.pdf
 
-
-
-# library(tidyverse)
-# library(igraph)
-# library(reshape2)
-# library(SnowballC)
-# library(stringr)
-# library(tidytext)
-# library(topicmodels)
-# library(tikzDevice)
-
 library(foreach)
 
 ## TODO: 
