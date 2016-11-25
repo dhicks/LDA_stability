@@ -60,7 +60,8 @@ lda_stability = function (token_counts,  ## token count df
 						  beta = .80,    ## fraction of docs to include in each sample
 						  tau = 20,      ## num. samples
 						  k_range = 2:5, ## range of values of k to fit
-						  t = 15         ## max num. terms in each ranked list
+						  t = 15,         ## max num. terms in each ranked list
+						  verbose = TRUE ## verbose output from the foreach loops
 ) {
 	library(foreach)
 	
@@ -80,7 +81,7 @@ lda_stability = function (token_counts,  ## token count df
 	## Iterate over the values of k
 	agree_scores = foreach(k = k_range, 
 						   .combine = 'cbind', 
-						   .verbose = TRUE, 
+						   .verbose = verbose, 
 						   .packages = c('topicmodels', 'tidyr')
 	) %do% 
 	{
@@ -104,7 +105,7 @@ lda_stability = function (token_counts,  ## token count df
 		si_ranksets = lapply(si, function (x) extract_rankset(x, t))
 		
 		agree_scores = foreach(rankset = si_ranksets, 
-							   .combine = 'c', .verbose = TRUE, 
+							   .combine = 'c', .verbose = verbose, 
 							   .packages = c('tidytext', 'dplyr', 'igraph', 
 							   			  'stringr'), 
 							   .export = c('agreement', 
